@@ -1,8 +1,3 @@
-## qaws-sqs
+# qaws-sqs
 
-Run this project with:
-
-```bash
-$ stack run
-Hello, world!
-```
+Utility library for common SQS interactions via `amazonka`.
