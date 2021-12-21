@@ -38,6 +38,25 @@ receiveWithPayload queueUrl waitTime messageLimit = do
   awsEnv <- view AWS.environment
   receiveWithPayload' awsEnv queueUrl waitTime messageLimit
 
+deleteMessage ::
+  (MonadUnliftIO m, MonadReader env m, AWS.HasEnv env) =>
+  QueueUrl ->
+  ReceiptHandle ->
+  m (Either AWS.Error ())
+deleteMessage queueUrl receiptHandle = do
+  awsEnv <- view AWS.environment
+  deleteMessage' awsEnv queueUrl receiptHandle
+
+deleteMessage' ::
+  (MonadUnliftIO m) =>
+  AWS.Env ->
+  QueueUrl ->
+  ReceiptHandle ->
+  m (Either AWS.Error ())
+deleteMessage' awsEnv (QueueUrl queueUrl) (ReceiptHandle receiptHandle) = do
+  let command = AWSSQS.deleteMessage queueUrl receiptHandle
+  void <$> tryRunAWS' awsEnv command
+
 receiveWithPayload' ::
   (MonadUnliftIO m, FromJSON a) =>
   AWS.Env ->
