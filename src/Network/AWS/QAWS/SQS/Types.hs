@@ -14,10 +14,16 @@ newtype WaitTime = WaitTime {unWaitTime :: Int}
 newtype MessageLimit = MessageLimit {unMessageLimit :: Int}
   deriving (Eq, Show)
 
+newtype ReceiptHandle = ReceiptHandle {unReceiptHandle :: Text}
+  deriving (Eq, Show)
+
+newtype MessageId = MessageId {unMessageId :: Text}
+  deriving (Eq, Show)
+
 data SQSMessage a = SQSMessage
   { _sqsMessageBody :: a,
-    _sqsMessageMessageId :: Text,
-    _sqsMessageReceiptHandle :: Text
+    _sqsMessageMessageId :: MessageId,
+    _sqsMessageReceiptHandle :: ReceiptHandle
   }
   deriving (Eq, Show)
 

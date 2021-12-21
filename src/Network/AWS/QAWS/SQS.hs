@@ -54,8 +54,9 @@ receiveWithPayload' awsEnv queueUrl waitTime messageLimit = do
     decodeMessage :: (FromJSON a) => AWSSQS.Message -> Either ReceiveMessageError (SQSMessage a)
     decodeMessage m = do
       body <- note ReceiveMessageNoBody $ m ^. AWSSQS.mBody
-      _sqsMessageReceiptHandle <- note ReceiveMessageNoReceiptHandle $ m ^. AWSSQS.mReceiptHandle
-      _sqsMessageMessageId <- note ReceiveMessageNoMessageId $ m ^. AWSSQS.mMessageId
+      _sqsMessageReceiptHandle <-
+        ReceiptHandle <$> note ReceiveMessageNoReceiptHandle (m ^. AWSSQS.mReceiptHandle)
+      _sqsMessageMessageId <- MessageId <$> note ReceiveMessageNoMessageId (m ^. AWSSQS.mMessageId)
       let bytes = encodeUtf8 body
       _sqsMessageBody <- mapLeft ReceiveMessageDecodingError $ eitherDecodeStrict bytes
       pure $ SQSMessage {_sqsMessageBody, _sqsMessageReceiptHandle, _sqsMessageMessageId}
