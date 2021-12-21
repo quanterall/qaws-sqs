@@ -3,6 +3,7 @@
 module Network.AWS.QAWS.SQS.Types where
 
 import Control.Lens.TH (makeLenses)
+import qualified Network.AWS as AWS
 import RIO
 
 newtype QueueUrl = QueueUrl {unQueueUrl :: Text}
@@ -20,6 +21,8 @@ newtype ReceiptHandle = ReceiptHandle {unReceiptHandle :: Text}
 newtype MessageId = MessageId {unMessageId :: Text}
   deriving (Eq, Show)
 
+-- | A message that is sent to a queue. In contrast to the standard message type in the amazonka
+-- libraries, this asserts that message id, receipt handle and body are all present.
 data SQSMessage a = SQSMessage
   { _sqsMessageBody :: a,
     _sqsMessageMessageId :: MessageId,
@@ -28,3 +31,13 @@ data SQSMessage a = SQSMessage
   deriving (Eq, Show)
 
 makeLenses ''SQSMessage
+
+data ReceiveMessageError
+  = ReceiveMessageAWSError AWS.Error
+  | ReceiveMessageDecodingError String
+  | ReceiveMessageNoBody
+  | ReceiveMessageNoReceiptHandle
+  | ReceiveMessageNoMessageId
+  deriving (Show)
+
+instance Exception ReceiveMessageError
