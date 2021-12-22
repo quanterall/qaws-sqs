@@ -6,11 +6,15 @@ module Network.AWS.QAWS.SQS
     receiveWithPayload',
     deleteMessage,
     deleteMessage',
+    sendJSONMessage,
+    sendJSONMessage',
+    sendMessage,
+    sendMessage',
   )
 where
 
 import Control.Lens ((?~))
-import Data.Aeson (FromJSON (..), eitherDecodeStrict)
+import Data.Aeson (FromJSON (..), ToJSON (..), eitherDecodeStrict, encode)
 import qualified Network.AWS as AWS
 import Network.AWS.QAWS
 import Network.AWS.QAWS.SQS.Types
@@ -110,6 +114,52 @@ deleteMessage' ::
 deleteMessage' awsEnv (QueueUrl queueUrl) (ReceiptHandle receiptHandle) = do
   let command = AWSSQS.deleteMessage queueUrl receiptHandle
   void <$> tryRunAWS' awsEnv command
+
+-- | Sends any @a@ with a 'ToJSON' instance to the queue with the given 'QueueUrl'. This looks for
+-- the needed AWS environment in your current environment via 'MonadReader', which makes it ideal
+-- for usage in a 'MonadReader' based stack (like 'RIO') that implements 'AWS.HasEnv'.
+sendJSONMessage ::
+  (MonadUnliftIO m, MonadReader env m, AWS.HasEnv env, ToJSON a) =>
+  QueueUrl ->
+  a ->
+  m (Either AWS.Error (Maybe Text))
+sendJSONMessage queueUrl a = do
+  awsEnv <- view AWS.environment
+  sendJSONMessage' awsEnv queueUrl a
+
+-- | A'la carte version of 'sendJSONMessage' that takes an environment instead of looking for one in
+-- your environment.
+sendJSONMessage' ::
+  (MonadUnliftIO m, ToJSON a) =>
+  AWS.Env ->
+  QueueUrl ->
+  a ->
+  m (Either AWS.Error (Maybe Text))
+sendJSONMessage' awsEnv queueUrl a = do
+  a & encode & toStrictBytes & decodeUtf8Lenient & sendMessage' awsEnv queueUrl
+
+-- | Sends 'Text' to the queue with the given 'QueueUrl'. This looks for the needed AWS environment
+-- in your current environment via 'MonadReader', which makes it ideal for usage in a 'MonadReader'
+-- based stack (like 'RIO') that implements 'AWS.HasEnv'.
+sendMessage ::
+  (MonadUnliftIO m, MonadReader env m, AWS.HasEnv env) =>
+  QueueUrl ->
+  Text ->
+  m (Either AWS.Error (Maybe Text))
+sendMessage queueUrl message = do
+  awsEnv <- view AWS.environment
+  sendMessage' awsEnv queueUrl message
+
+-- | A'la carte version of 'sendMessage' that takes an environment instead of looking for one in
+-- your environment.
+sendMessage' ::
+  (MonadUnliftIO m) =>
+  AWS.Env ->
+  QueueUrl ->
+  Text ->
+  m (Either AWS.Error (Maybe Text))
+sendMessage' awsEnv (QueueUrl queueUrl) message = do
+  fmap (^. AWSSQS.smrsMessageId) <$> tryRunAWS' awsEnv (AWSSQS.sendMessage queueUrl message)
 
 note :: e -> Maybe a -> Either e a
 note e = maybe (Left e) Right
