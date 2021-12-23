@@ -10,6 +10,8 @@ module Network.AWS.QAWS.SQS
     sendJSONMessage',
     sendMessage,
     sendMessage',
+    getQueueAttributes,
+    getQueueAttributes',
   )
 where
 
@@ -20,6 +22,8 @@ import Network.AWS.QAWS
 import Network.AWS.QAWS.SQS.Types
 import qualified Network.AWS.SQS as AWSSQS
 import RIO
+import qualified RIO.HashMap as HashMap
+import qualified RIO.Text as Text
 
 -- | Receives messages from a queue with the given 'QueueUrl', waiting for up to 'WaitTime' seconds,
 -- for a response and returns a maximum number of 'MessageLimit' messages. This looks for the needed
@@ -161,5 +165,59 @@ sendMessage' ::
 sendMessage' awsEnv (QueueUrl queueUrl) message = do
   fmap (^. AWSSQS.smrsMessageId) <$> tryRunAWS' awsEnv (AWSSQS.sendMessage queueUrl message)
 
+-- | Gets the queue attributes of the queue associated with 'QueueUrl'. This looks for the needed
+-- AWS environment in your current environment via 'MonadReader', which makes it ideal for usage in
+-- a 'MonadReader' based stack (like 'RIO') that implements 'AWS.HasEnv'.
+getQueueAttributes ::
+  (MonadUnliftIO m, MonadReader env m, AWS.HasEnv env) =>
+  QueueUrl ->
+  m (Either AWS.Error QueueAttributes)
+getQueueAttributes queueUrl = do
+  awsEnv <- view AWS.environment
+  getQueueAttributes' awsEnv queueUrl
+
+-- | A'la carte version of 'getQueueAttributes' that takes an environment instead of looking for one
+-- in your environment.
+getQueueAttributes' ::
+  (MonadUnliftIO m) =>
+  AWS.Env ->
+  QueueUrl ->
+  m (Either AWS.Error QueueAttributes)
+getQueueAttributes' awsEnv queueUrl = do
+  let command =
+        queueUrl & unQueueUrl & AWSSQS.getQueueAttributes & AWSSQS.gqaAttributeNames
+          .~ [ AWSSQS.QANQueueARN,
+               AWSSQS.QANApproximateNumberOfMessages,
+               AWSSQS.QANApproximateNumberOfMessagesNotVisible,
+               AWSSQS.QANApproximateNumberOfMessagesDelayed
+             ]
+  maybeResponse <- tryRunAWS' awsEnv command
+  case maybeResponse of
+    Right response -> pure $ Right $ createQueueAttributes queueUrl response
+    Left e -> pure $ Left e
+
+createQueueAttributes :: QueueUrl -> AWSSQS.GetQueueAttributesResponse -> QueueAttributes
+createQueueAttributes queueUrl response =
+  let m = response ^. AWSSQS.gqarsAttributes
+      queueAttributesArn = HashMap.lookup AWSSQS.QANQueueARN m
+      queueAttributesMessages =
+        MessageCount <$> (HashMap.lookup AWSSQS.QANApproximateNumberOfMessages m >>= treadMaybe)
+      queueAttributesDelayedMessages =
+        DelayedMessageCount
+          <$> (HashMap.lookup AWSSQS.QANApproximateNumberOfMessagesDelayed m >>= treadMaybe)
+      queueAttributesNotVisibleMessages =
+        NotVisibleCount
+          <$> (HashMap.lookup AWSSQS.QANApproximateNumberOfMessagesNotVisible m >>= treadMaybe)
+   in QueueAttributes
+        { queueAttributesArn,
+          queueAttributesUrl = queueUrl,
+          queueAttributesMessages,
+          queueAttributesDelayedMessages,
+          queueAttributesNotVisibleMessages
+        }
+
 note :: e -> Maybe a -> Either e a
 note e = maybe (Left e) Right
+
+treadMaybe :: (Read a) => Text -> Maybe a
+treadMaybe = Text.unpack >>> readMaybe
