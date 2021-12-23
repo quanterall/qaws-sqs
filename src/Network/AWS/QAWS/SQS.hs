@@ -187,7 +187,7 @@ getQueueAttributes' ::
   m (Either AWS.Error QueueAttributes)
 getQueueAttributes' awsEnv queueUrl = do
   let command =
-        queueUrl & unQueueUrl & AWSSQS.getQueueAttributes & AWSSQS.gqaAttributeNames
+        queueUrl & _unQueueUrl & AWSSQS.getQueueAttributes & AWSSQS.gqaAttributeNames
           .~ [ AWSSQS.QANQueueARN,
                AWSSQS.QANApproximateNumberOfMessages,
                AWSSQS.QANApproximateNumberOfMessagesNotVisible,
