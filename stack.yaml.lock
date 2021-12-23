@@ -19,16 +19,16 @@ packages:
   original:
     hackage: unliftio-core-0.1.2.0@sha256:b0a7652ffce2284a6cebe05c99eb60573a8fb6631163f34b0b30a80b4a78cb23,1081
 - completed:
-    size: 4505
-    url: https://github.com/quanterall/qaws/archive/47301eda440ec6e32d8a9fb4021b1a57a4bb8400.tar.gz
+    size: 4593
+    url: https://github.com/quanterall/qaws/archive/b814deb7948342109d45e2ab7e5cff04b3cde239.tar.gz
     name: qaws
     version: 0.0.0
-    sha256: b4e97ed47da9a20c32709135ae0c019da91e6e02cdeba6326572fd23eb6e32c7
+    sha256: df88a8ba95e78f282ada47ca461be1bf893581a31ee143559b45b3a5413df015
     pantry-tree:
       size: 618
-      sha256: ab3a964522474301ae04b42669be904d9f1d5bfd8ffd6028fb5d22df9b62dbd9
+      sha256: ff1d3a534d127b0916b92a1e43969056e5fc0702bd7a228e48c80fc3b4f4ef09
   original:
-    url: https://github.com/quanterall/qaws/archive/47301eda440ec6e32d8a9fb4021b1a57a4bb8400.tar.gz
+    url: https://github.com/quanterall/qaws/archive/b814deb7948342109d45e2ab7e5cff04b3cde239.tar.gz
 snapshots:
 - completed:
     size: 586069
