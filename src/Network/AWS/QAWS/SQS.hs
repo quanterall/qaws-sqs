@@ -12,6 +12,8 @@ module Network.AWS.QAWS.SQS
     sendMessage',
     getQueueAttributes,
     getQueueAttributes',
+    purgeQueue,
+    purgeQueue',
   )
 where
 
@@ -215,6 +217,26 @@ createQueueAttributes queueUrl response =
           queueAttributesDelayedMessages,
           queueAttributesNotVisibleMessages
         }
+
+-- | Purges all messages from a queue. This looks for the needed AWS environment in your current
+-- environment via 'MonadReader', which makes it ideal for usage in a 'MonadReader' based stack
+-- (like 'RIO') that implements 'AWS.HasEnv'.
+purgeQueue ::
+  (MonadUnliftIO m, MonadReader env m, AWS.HasEnv env) =>
+  QueueUrl ->
+  m (Either AWS.Error ())
+purgeQueue queueUrl = do
+  awsEnv <- view AWS.environment
+  purgeQueue' awsEnv queueUrl
+
+-- | A'la carte version of 'purgeQueue' that takes an environment instead of looking for one in your
+-- environment.
+purgeQueue' :: (MonadUnliftIO m) => AWS.Env -> QueueUrl -> m (Either AWS.Error ())
+purgeQueue' awsEnv (QueueUrl queueUrl) = do
+  maybeResponse <- tryRunAWS' awsEnv $ AWSSQS.purgeQueue queueUrl
+  case maybeResponse of
+    Right _ -> pure $ Right ()
+    Left e -> pure $ Left e
 
 note :: e -> Maybe a -> Either e a
 note e = maybe (Left e) Right
